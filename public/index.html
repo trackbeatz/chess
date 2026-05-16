@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chess Pro - Online Multiplayer</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root {
+            --bg-teal: radial-gradient(circle, #0a3d3d 0%, #051a1a 100%);
+            --btn-green: linear-gradient(to bottom, #72ff00, #3e8c00);
+            --btn-blue: linear-gradient(to bottom, #00d2ff, #007ca0);
+            --light-sq: #f0d9b5;
+            --dark-sq: #b58863;
+            --sq-size: 12vw;
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            font-family: 'Arial Black', sans-serif;
+            background: var(--bg-teal);
+            color: white;
+            overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        .screen {
+            position: absolute; width: 100%; height: 100%;
+            display: none; flex-direction: column;
+            align-items: center; justify-content: center;
+            text-align: center;
+            box-sizing: border-box;
+            padding: 20px;
+        }
+        .active { display: flex; }
+
+        .chess-logo { width: 100px; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+        
+        .loading-bar { width: 70%; height: 12px; background: #111; border-radius: 10px; border: 2px solid #333; margin-top: 20px; }
+        .loading-fill { width: 0%; height: 100%; background: #72ff00; border-radius: 10px; transition: width 0.1s; }
+
+        .btn-menu {
+            width: 80%; max-width: 300px; padding: 15px; margin: 10px 0;
+            border-radius: 15px; border: 2px solid rgba(255,255,255,0.2);
+            font-size: 1.1rem; color: white; text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4); cursor: pointer;
+        }
+        .btn-green { background: var(--btn-green); }
+        .btn-blue { background: var(--btn-blue); }
+
+        .input-code {
+            width: 80%; max-width: 280px; padding: 12px; margin: 10px 0;
+            border-radius: 10px; border: 2px solid #00d2ff;
+            font-size: 1.2rem; text-align: center; font-family: monospace;
+            background: #222; color: #fff;
+        }
+
+        /* Lobby System Styles */
+        .lobby-container {
+            width: 90%; max-width: 320px; height: 180px;
+            background: rgba(0,0,0,0.5); border: 2px solid #007ca0;
+            border-radius: 12px; margin: 15px 0; overflow-y: auto;
+            padding: 10px; box-sizing: border-box;
+        }
+        .no-rooms { font-family: sans-serif; font-size: 0.9rem; color: #aaa; margin-top: 60px; }
+        .room-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255,255,255,0.1); padding: 8px 12px;
+            border-radius: 8px; margin-bottom: 8px; font-family: sans-serif; font-size: 0.95rem;
+        }
+        .room-code-txt { font-weight: bold; color: #ffd700; font-family: monospace; font-size: 1.1rem; }
+        .btn-join-small {
+            background: var(--btn-green); border: none; padding: 6px 12px;
+            color: white; border-radius: 6px; cursor: pointer; font-family: 'Arial Black'; font-size: 0.75rem;
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.85); display: none;
+            justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal-box {
+            background: #113333; border: 3px solid #72ff00; border-radius: 20px;
+            padding: 25px; width: 80%; max-width: 300px; text-align: center;
+            box-shadow: 0 0 20px rgba(114,255,0,0.4);
+        }
+        .modal-actions { display: flex; gap: 15px; justify-content: center; margin-top: 20px; }
+        .modal-btn { padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer; font-family: 'Arial Black'; color: white;}
+
+        .color-panel {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px; border-radius: 10px;
+            margin: 10px 0; width: 80%; max-width: 300px;
+        }
+        .color-pickers { display: flex; justify-content: space-around; margin-top: 10px; }
+        .color-picker-wrapper { display: flex; flex-direction: column; align-items: center; font-size: 0.9rem; }
+        .color-input {
+            -webkit-appearance: none; -moz-appearance: none; appearance: none;
+            width: 50px; height: 50px; border: 2px solid white; border-radius: 50%;
+            cursor: pointer; background: none; margin-top: 5px;
+        }
+        .color-input::-webkit-color-swatch-wrapper { padding: 0; }
+        .color-input::-webkit-color-swatch { border: none; border-radius: 50%; }
+
+        .board-wrapper { position: relative; border: 5px solid #333; }
+        #board { display: grid; grid-template-columns: repeat(8, var(--sq-size)); grid-template-rows: repeat(8, var(--sq-size)); }
+        .square { width: var(--sq-size); height: var(--sq-size); display: flex; align-items: center; justify-content: center; font-size: 8.5vw; position: relative; user-select: none; }
+        
+        .sq-light { background-color: var(--light-sq); }
+        .sq-dark { background-color: var(--dark-sq); }
+        
+        .selected { background-color: rgba(255, 255, 0, 0.6) !important; }
+        .hint-green::after { content: ''; width: 30%; height: 30%; background: rgba(0, 255, 0, 0.5); border-radius: 50%; position: absolute; }
+        .in-check { background-color: rgba(255, 0, 0, 0.7) !important; }
+        
+        #status { font-size: 1.2rem; margin-bottom: 15px; color: #ffd700; text-shadow: 2px 2px 4px black; min-height: 1.5em; }
+
+        .promotion-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); display: none;
+            flex-direction: column; justify-content: center; align-items: center; z-index: 10;
+        }
+        .promotion-options { display: flex; gap: 15px; margin-top: 15px; }
+        .promo-btn {
+            width: 60px; height: 60px; background: #333; border: 2px solid #ffd700;
+            border-radius: 10px; font-size: 2.5rem; color: white; cursor: pointer;
+            display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="join-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div style="font-size: 1.1rem; color: #ffd700; margin-bottom: 10px;">MATCH ROOM DETECTED</div>
+            <p id="modal-text" style="font-family: sans-serif; font-size: 0.95rem; line-height: 1.4;">Do you want to join this group?</p>
+            <div class="modal-actions">
+                <button class="modal-btn" style="background: var(--btn-green);" onclick="confirmRoomJoin(true)">YES</button>
+                <button class="modal-btn" style="background: #e02424;" onclick="confirmRoomJoin(false)">NO</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="splash" class="screen active">
+        <img src="https://cdn-icons-png.flaticon.com/512/2913/2913491.png" class="chess-logo">
+        <p>LOADING...</p>
+        <div class="loading-bar"><div id="load-fill" class="loading-fill"></div></div>
+    </div>
+
+    <div id="menu" class="screen">
+        <img src="https://cdn-icons-png.flaticon.com/512/2913/2913491.png" class="chess-logo">
+        <div style="font-size: 1.2rem; margin-bottom: 20px;">CHOOSE YOUR MODE</div>
+        <button class="btn-menu btn-green" onclick="selectMode('computer')">PLAY VS COMPUTER</button>
+        <button class="btn-menu btn-blue" onclick="selectMode('online')">PLAY ONLINE ANYWHERE</button>
+    </div>
+
+    <div id="room-select" class="screen">
+        <div style="font-size: 1.3rem; margin-bottom: 5px; color: #ffd700;">MULTIPLAYER ROOMS</div>
+        
+        <input type="text" id="room-input" class="input-code" placeholder="ENTER ROOM CODE">
+        <button class="btn-menu btn-green" style="padding: 12px; font-size: 1rem; margin: 5px 0;" onclick="handleManualCodeSubmit()">CREATE / SEARCH CODE</button>
+        
+        <div style="font-size: 0.9rem; margin-top: 15px; color: #00d2ff; text-transform: uppercase;">Available Open Lobby Rooms:</div>
+        <div class="lobby-container" id="lobby-list">
+            <div class="no-rooms">No available public lobbies found. Create one above!</div>
+        </div>
+
+        <button class="btn-menu btn-blue" style="font-size: 0.9rem; padding: 10px; max-width: 150px; margin-top: 5px;" onclick="showScreen('menu')">BACK</button>
+    </div>
+
+    <div id="color-select" class="screen">
+        <div style="font-size: 1.4rem; margin-bottom: 10px; color: #ffd700;">CUSTOMIZE PIECES</div>
+        <div class="color-panel">
+            <div>FATHER'S COLOR</div>
+            <div class="color-pickers"><div class="color-picker-wrapper"><input type="color" id="father-color" class="color-input" value="#ffffff"></div></div>
+        </div>
+        <div class="color-panel">
+            <div>MOTHER'S COLOR</div>
+            <div class="color-pickers"><div class="color-picker-wrapper"><input type="color" id="mother-color" class="color-input" value="#000000"></div></div>
+        </div>
+        <button class="btn-menu btn-green" onclick="confirmColorsAndStart()">BATTLE</button>
+    </div>
+
+    <div id="game" class="screen">
+        <div id="status">WAITING FOR OPPONENT...</div>
+        <div class="board-wrapper">
+            <div id="board"></div>
+            <div id="promo-overlay" class="promotion-overlay">
+                <div style="font-size: 1.2rem; color: #ffd700;">PROMOTE PAWN</div>
+                <div class="promotion-options" id="promo-choices"></div>
+            </div>
+        </div>
+        <button class="btn-menu btn-blue" style="width: auto; padding: 10px 20px; margin-top: 15px;" onclick="confirmExit()">BACK TO MENU</button>
+    </div>
+
+<script>
+    let socket;
+    let currentRoomCode = "";
+    let playerRole = null;
+    let isOnlineMode = false;
+    let isComputerMode = false;
+    let gameReady = false;
+    let selectedTargetRoom = "";
+
+    let boardState = [];
+    let turn = 'father';
+    let selectedSquare = null;
+    let validMoves = [];
+    let isPromoting = false; 
+    
+    let colors = { father: '#ffffff', mother: '#000000' };
+    let hasKingMoved = { father: false, mother: false };
+    let hasRookMoved = { fatherL: false, fatherR: false, motherL: false, motherR: false };
+    let lastMove = null; 
+
+    const boardElement = document.getElementById('board');
+    const statusElement = document.getElementById('status');
+    const promoOverlay = document.getElementById('promo-overlay');
+    const promoChoices = document.getElementById('promo-choices');
+    const lobbyListElement = document.getElementById('lobby-list');
+    const joinModal = document.getElementById('join-modal');
+    const modalText = document.getElementById('modal-text');
+
+    const pieceSymbols = {
+        'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚', 'P': '♟', 
+        'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟', '': ''
+    };
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function confirmExit() {
+        if (confirm("Are you sure you want to leave?")) {
+            if (socket) socket.disconnect();
+            location.reload(); 
+        }
+    }
+
+    // Splash Loader
+    let progress = 0;
+    const loadInt = setInterval(() => {
+        progress += 5;
+        const fill = document.getElementById('load-fill');
+        if (fill) fill.style.width = progress + '%';
+        if(progress >= 100) { clearInterval(loadInt); showScreen('menu'); }
+    }, 20);
+
+    function selectMode(mode) {
+        isComputerMode = (mode === 'computer');
+        isOnlineMode = (mode === 'online');
+        if (isOnlineMode) {
+            setupSocketConnection();
+            showScreen('room-select');
+        } else {
+            playerRole = null;
+            gameReady = true;
+            showScreen('color-select');
+        }
+    }
+
+    function setupSocketConnection() {
+        if (socket) return;
+        socket = io();
+
+        // Listen for public active rooms list updates
+        socket.on('roomsListUpdate', (openRooms) => {
+            renderLobbyList(openRooms);
+        });
+
+        socket.on('roleAssigned', (data) => {
+            playerRole = data.role;
+            showScreen('color-select');
+        });
+
+        socket.on('roomFull', () => {
+            alert("This room is already full!");
+            selectedTargetRoom = "";
+        });
+
+        socket.on('gameStart', () => {
+            gameReady = true;
+            render();
+        });
+
+        socket.on('opponentMove', (data) => {
+            executeMove(data.fromR, data.fromC, data.toR, data.toC, data.moveDetails, false);
+        });
+
+        socket.on('opponentPromote', (data) => {
+            boardState[data.r][data.c] = data.type;
+            finalizeTurn();
+        });
+
+        socket.on('playerDisconnected', () => {
+            alert("Your opponent disconnected.");
+            location.reload();
+        });
+    }
+
+    function renderLobbyList(openRooms) {
+        if (!lobbyListElement) return;
+        if (openRooms.length === 0) {
+            lobbyListElement.innerHTML = `<div class="no-rooms">No available public lobbies found. Create one above!</div>`;
+            return;
+        }
+
+        lobbyListElement.innerHTML = '';
+        openRooms.forEach(room => {
+            const row = document.createElement('div');
+            row.className = 'room-item';
+            row.innerHTML = `
+                <div>Room: <span class="room-code-txt">${room.roomCode}</span></div>
+                <button class="btn-join-small" onclick="promptJoinModal('${room.roomCode}')">JOIN</button>
+            `;
+            lobbyListElement.appendChild(row);
+        });
+    }
+
+    function handleManualCodeSubmit() {
+        const code = document.getElementById('room-input').value.trim().toUpperCase();
+        if (!code) return alert("Please enter a room code layout.");
+        
+        // If rooms are populated and the manual search item exists, ask to join. Else create.
+        currentRoomCode = code;
+        socket.emit('joinRoom', { roomCode: currentRoomCode });
+    }
+
+    function promptJoinModal(roomCode) {
+        selectedTargetRoom = roomCode;
+        modalText.innerText = `Do you want to join this group room matching session: [${roomCode}]?`;
+        joinModal.style.display = 'flex';
+    }
+
+    function confirmRoomJoin(approved) {
+        joinModal.style.display = 'none';
+        if (approved && selectedTargetRoom) {
+            currentRoomCode = selectedTargetRoom;
+            socket.emit('joinRoom', { roomCode: currentRoomCode });
+        }
+        selectedTargetRoom = "";
+    }
+
+    function confirmColorsAndStart() {
+        colors.father = document.getElementById('father-color').value;
+        colors.mother = document.getElementById('mother-color').value;
+        showScreen('game');
+        resetGame();
+    }
+
+    function resetGame() {
+        boardState = [
+            ['r','n','b','q','k','b','n','r'], 
+            ['p','p','p','p','p','p','p','p'],
+            ['','','','','','','',''], ['','','','','','','',''],
+            ['','','','','','','',''], ['','','','','','','',''],
+            ['P','P','P','P','P','P','P','P'], 
+            ['R','N','B','Q','K','B','N','R']
+        ];
+        turn = 'father';
+        hasKingMoved = { father: false, mother: false };
+        hasRookMoved = { fatherL: false, fatherR: false, motherL: false, motherR: false };
+        lastMove = null; selectedSquare = null; validMoves = []; isPromoting = false;
+        if(promoOverlay) promoOverlay.style.display = 'none';
+        render();
+    }
+
+    function getValidMoves(r, c, state = boardState, checkSafety = true) {
+        const piece = state[r][c];
+        if (piece === '') return [];
+        const type = piece.toLowerCase();
+        const isFather = piece === piece.toUpperCase();
+        let moves = [];
+        const dirs = {
+            'r': [[0,1],[0,-1],[1,0],[-1,0]], 'b': [[1,1],[1,-1],[-1,1],[-1,-1]],
+            'q': [[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]]
+        };
+
+        if (dirs[type]) {
+            dirs[type].forEach(d => {
+                let nr = r + d[0], nc = c + d[1];
+                while(nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+                    if(state[nr][nc] === '') moves.push({r: nr, c: nc});
+                    else { if((state[nr][nc] === state[nr][nc].toUpperCase()) !== isFather) moves.push({r: nr, c: nc}); break; }
+                    nr += d[0]; nc += d[1];
+                }
+            });
+        } else if (type === 'n') {
+            [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]].forEach(j => {
+                let nr = r+j[0], nc = c+j[1];
+                if(nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+                    if(state[nr][nc] === '' || (state[nr][nc] === state[nr][nc].toUpperCase()) !== isFather) moves.push({r: nr, c: nc});
+                }
+            });
+        } else if (type === 'k') {
+            for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++) {
+                if(dr===0 && dc===0) continue;
+                let nr = r+dr, nc = c+dc;
+                if(nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+                    if(state[nr][nc] === '' || (state[nr][nc] === state[nr][nc].toUpperCase()) !== isFather) moves.push({r: nr, c: nc});
+                }
+            }
+            if (checkSafety) {
+                const side = isFather ? 'father' : 'mother'; const row = isFather ? 7 : 0;
+                if (!hasKingMoved[side] && !isCheck(side, state)) {
+                    if (!hasRookMoved[side+'R'] && state[row][5]==='' && state[row][6]==='') { if (!isSquareAttacked(row, 5, side, state)) moves.push({r: row, c: 6, isCastle: true}); }
+                    if (!hasRookMoved[side+'L'] && state[row][1]==='' && state[row][2]==='' && state[row][3]==='') { if (!isSquareAttacked(row, 3, side, state)) moves.push({r: row, c: 2, isCastle: true}); }
+                }
+            }
+        } else if (type === 'p') {
+            let dir = isFather ? -1 : 1;
+            if(state[r+dir] && state[r+dir][c] === '') {
+                moves.push({r: r+dir, c: c});
+                if(r === (isFather ? 6 : 1) && state[r+dir*2] && state[r+dir*2][c] === '') moves.push({r: r+dir*2, c: c});
+            }
+            [1, -1].forEach(s => {
+                let nr = r + dir, nc = c + s;
+                if(nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+                    if(state[nr][nc] !== '' && (state[nr][nc] === state[nr][nc].toUpperCase()) !== isFather) moves.push({r: nr, c: nc});
+                    if(checkSafety && lastMove && lastMove.piece.toLowerCase() === 'p' && Math.abs(lastMove.fromR - lastMove.toR) === 2) {
+                        if(lastMove.toR === r && lastMove.toC === nc) moves.push({r: nr, c: nc, isEnPassant: true});
+                    }
+                }
+            });
+        }
+        if (checkSafety) {
+            return moves.filter(m => {
+                const tempBoard = state.map(row => [...row]); tempBoard[m.r][m.c] = tempBoard[r][c]; tempBoard[r][c] = '';
+                return !isCheck(isFather ? 'father' : 'mother', tempBoard);
+            });
+        }
+        return moves;
+    }
+
+    function isCheck(side, state = boardState) {
+        const isFather = side === 'father'; const kingChar = isFather ? 'K' : 'k'; let kingPos = null;
+        for(let r=0; r<8; r++) { for(let c=0; c<8; c++) { if(state[r][c] === kingChar) { kingPos = {r, c}; break; } } if(kingPos) break; }
+        if(!kingPos) return false;
+        return isSquareAttacked(kingPos.r, kingPos.c, side, state);
+    }
+
+    function isSquareAttacked(targetR, targetC, defensiveSide, state) {
+        const isFatherDefense = defensiveSide === 'father';
+        for(let r=0; r<8; r++) {
+            for(let c=0; c<8; c++) {
+                const piece = state[r][c];
+                if(piece !== '' && (piece === piece.toUpperCase()) !== isFatherDefense) {
+                    const moves = getValidMoves(r, c, state, false); 
+                    if(moves.some(m => m.r === targetR && m.c === targetC)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function executeMove(fromR, fromC, toR, toC, moveDetails, emitMove = true) {
+        const piece = boardState[fromR][fromC];
+        const isFather = piece === piece.toUpperCase();
+
+        if (moveDetails?.isCastle) {
+            const rookCol = toC === 6 ? 7 : 0; const newRookCol = toC === 6 ? 5 : 3;
+            boardState[toR][newRookCol] = boardState[toR][rookCol]; boardState[toR][rookCol] = '';
+        }
+        if (moveDetails?.isEnPassant) boardState[fromR][toC] = '';
+
+        boardState[toR][toC] = piece;
+        boardState[fromR][fromC] = '';
+
+        if (piece === 'K') hasKingMoved.father = true;
+        if (piece === 'k') hasKingMoved.mother = true;
+        if (fromR === 7 && fromC === 0) hasRookMoved.fatherL = true;
+        if (fromR === 7 && fromC === 7) hasRookMoved.fatherR = true;
+        if (fromR === 0 && fromC === 0) hasRookMoved.motherL = true;
+        if (fromR === 0 && fromC === 7) hasRookMoved.motherR = true;
+
+        lastMove = { fromR, fromC, toR, toC, piece };
+        selectedSquare = null; validMoves = [];
+
+        if (emitMove && isOnlineMode) {
+            socket.emit('playerMove', { roomCode: currentRoomCode, fromR, fromC, toR, toC, moveDetails });
+        }
+
+        if (piece.toLowerCase() === 'p' && (toR === 0 || toR === 7)) {
+            if (isComputerMode && !isFather) {
+                boardState[toR][toC] = 'q'; finalizeTurn();
+            } else if (isOnlineMode && playerRole !== turn) {
+                // Wait for opponent confirmation
+            } else {
+                handlePromotion(toR, toC, isFather);
+            }
+        } else {
+            finalizeTurn();
+        }
+    }
+
+    function handlePromotion(r, c, isFather) {
+        isPromoting = true;
+        promoOverlay.style.display = 'flex';
+        promoChoices.innerHTML = '';
+        const choices = isFather ? ['Q', 'R', 'B', 'N'] : ['q', 'r', 'b', 'n'];
+        choices.forEach(type => {
+            const btn = document.createElement('button');
+            btn.className = 'promo-btn'; btn.textContent = pieceSymbols[type];
+            btn.style.color = isFather ? colors.father : colors.mother;
+            btn.onclick = () => {
+                boardState[r][c] = type;
+                promoOverlay.style.display = 'none';
+                isPromoting = false;
+                if (isOnlineMode) socket.emit('playerPromote', { roomCode: currentRoomCode, r, c, type });
+                finalizeTurn();
+            };
+            promoChoices.appendChild(btn);
+        });
+    }
+
+    function finalizeTurn() {
+        turn = (turn === 'father') ? 'mother' : 'father';
+        render();
+        if (!checkForGameOver() && isComputerMode && turn === 'mother') {
+            statusElement.textContent = "MOTHER IS THINKING...";
+            setTimeout(makeComputerMove, 1000);
+        }
+    }
+
+    function makeComputerMove() {
+        if (isPromoting) return; 
+        let allMoves = [];
+        for (let r=0; r<8; r++) {
+            for (let c=0; c<8; c++) {
+                if (boardState[r][c] !== '' && boardState[r][c] === boardState[r][c].toLowerCase()) {
+                    let moves = getValidMoves(r, c);
+                    moves.forEach(m => {
+                        let score = 0; if (boardState[m.r][m.c] !== '') score = 10;
+                        allMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c, score, details: m });
+                    });
+                }
+            }
+        }
+        if (allMoves.length > 0) {
+            allMoves.sort((a,b) => b.score - a.score || Math.random() - 0.5);
+            const best = allMoves[0];
+            executeMove(best.fromR, best.fromC, best.toR, best.toC, best.details);
+        }
+    }
+
+    function checkForGameOver() {
+        const isFather = turn === 'father'; let hasMove = false;
+        for (let r=0; r<8; r++) {
+            for (let c=0; c<8; c++) {
+                if (boardState[r][c] !== '' && (boardState[r][c] === boardState[r][c].toUpperCase()) === isFather) {
+                    if (getValidMoves(r, c).length > 0) { hasMove = true; break; }
+                }
+            } if(hasMove) break;
+        }
+        if (!hasMove) {
+            setTimeout(() => {
+                if (isCheck(turn)) alert(`CHECKMATE! ${turn === 'father' ? 'MOTHER' : 'FATHER'} WINS!`);
+                else alert("STALEMATE! DRAW.");
+                location.reload();
+            }, 300);
+            return true;
+        }
+        return false;
+    }
+
+    function handleSquareClick(r, c) {
+        if (!gameReady || isPromoting) return; 
+        if (isOnlineMode && playerRole !== turn) return; 
+        
+        const piece = boardState[r][c];
+        const isTurn = piece !== '' && ((turn === 'father' && piece === piece.toUpperCase()) || (turn === 'mother' && piece === piece.toLowerCase()));
+
+        if (selectedSquare) {
+            const move = validMoves.find(m => m.r === r && m.c === c);
+            if (move) {
+                executeMove(selectedSquare.r, selectedSquare.c, r, c, move);
+            } else {
+                selectedSquare = isTurn ? {r, c} : null;
+                validMoves = selectedSquare ? getValidMoves(r, c) : [];
+                render();
+            }
+        } else if (isTurn) {
+            selectedSquare = {r, c};
+            validMoves = getValidMoves(r, c);
+            render();
+        }
+    }
+
+    function render() {
+        if (!boardElement) return;
+        boardElement.innerHTML = '';
+
+        if (!gameReady) {
+            statusElement.textContent = "WAITING FOR OPPONENT... ROOM: " + currentRoomCode;
+        } else {
+            statusElement.textContent = turn.toUpperCase() + "'S TURN" + (isOnlineMode ? ` (${playerRole === turn ? 'YOUR TURN' : 'OPPONENT TURN'})` : '');
+        }
+
+        const fCheck = isCheck('father'), mCheck = isCheck('mother');
+
+        for (let r=0; r<8; r++) {
+            for (let c=0; c<8; c++) {
+                const sq = document.createElement('div');
+                const p = boardState[r][c];
+                
+                sq.className = `square ${(r+c)%2===0 ? 'sq-light':'sq-dark'}`;
+                if (selectedSquare?.r===r && selectedSquare?.c===c) sq.classList.add('selected');
+                if (validMoves.some(m => m.r===r && m.c===c)) sq.classList.add('hint-green');
+                if ((p==='K' && fCheck) || (p==='k' && mCheck)) sq.classList.add('in-check');
+                
+                sq.textContent = pieceSymbols[p];
+                if (p !== '') {
+                    sq.style.color = p === p.toUpperCase() ? colors.father : colors.mother;
+                }
+
+                sq.onclick = () => handleSquareClick(r, c);
+                boardElement.appendChild(sq);
+            }
+        }
+    }
+</script>
+</body>
+</html>
