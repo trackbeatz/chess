@@ -24,14 +24,20 @@
             display: flex; justify-content: center; align-items: center;
         }
 
-        .screen {
-            position: absolute; width: 100%; height: 100%;
-            display: none; flex-direction: column;
-            align-items: center; justify-content: center;
+        ..screen {
+            position: absolute; 
+            width: 100%; 
+            height: 100%;
+            display: none; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: flex-start; /* Changed from center to prevent top-clipping */
             text-align: center;
             box-sizing: border-box;
             padding: 20px;
-        }
+            overflow-y: auto;            /* Added to allow vertical scrolling when elements expand */
+}
+
         .active { display: flex; }
 
         .chess-logo { width: 100px; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
@@ -57,12 +63,12 @@
 
         /* Lobby System Styles */
         .lobby-container {
-            width: 90%; max-width: 320px; height: 180px;
+            width: 90%; max-width: 320px; height: 150px;
             background: rgba(0,0,0,0.5); border: 2px solid #007ca0;
-            border-radius: 12px; margin: 15px 0; overflow-y: auto;
+            border-radius: 12px; margin: 10px 0; overflow-y: auto;
             padding: 10px; box-sizing: border-box;
         }
-        .no-rooms { font-family: sans-serif; font-size: 0.9rem; color: #aaa; margin-top: 60px; }
+        .no-rooms { font-family: sans-serif; font-size: 0.9rem; color: #aaa; margin-top: 45px; }
         .room-item {
             display: flex; justify-content: space-between; align-items: center;
             background: rgba(255,255,255,0.1); padding: 8px 12px;
@@ -72,6 +78,18 @@
         .btn-join-small {
             background: var(--btn-green); border: none; padding: 6px 12px;
             color: white; border-radius: 6px; cursor: pointer; font-family: 'Arial Black'; font-size: 0.75rem;
+        }
+
+        /* Staking Layout Adjustments */
+        .staking-panel {
+            background: rgba(0, 0, 0, 0.4); border: 1px dashed #72ff00;
+            padding: 12px; border-radius: 10px; margin: 8px 0;
+            width: 80%; max-width: 280px; text-align: left; font-family: sans-serif; font-size: 0.9rem;
+        }
+        .staking-panel label { font-weight: bold; color: #fff; display: block; margin-bottom: 4px; }
+        .staking-panel input {
+            width: 100%; padding: 8px; box-sizing: border-box; border-radius: 5px;
+            border: 1px solid #333; background: #222; color: #fff; margin-bottom: 8px;
         }
 
         /* Modals */
@@ -127,6 +145,10 @@
             border-radius: 10px; font-size: 2.5rem; color: white; cursor: pointer;
             display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.5);
         }
+        #room-select {
+    padding-top: 40px; /* Gives the header title breathing room at the top */
+}
+
     </style>
 </head>
 <body>
@@ -159,9 +181,23 @@
         <div style="font-size: 1.3rem; margin-bottom: 5px; color: #ffd700;">MULTIPLAYER ROOMS</div>
         
         <input type="text" id="room-input" class="input-code" placeholder="ENTER ROOM CODE">
+        
+        <div class="staking-panel">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px;">
+                <input type="checkbox" id="is-staked" onchange="toggleOpayFields()" style="width: auto; margin: 0;"> 
+                Stake Money (OPay ₦)
+            </label>
+            <div id="opay-setup-group" style="display: none;">
+                <label>Stake Amount (₦):</label>
+                <input type="number" id="stake-amount" value="500" min="100" step="100">
+                <label>OPay Phone Number:</label>
+                <input type="tel" id="user-opay-phone" placeholder="08103334444" maxlength="11">
+            </div>
+        </div>
+
         <button class="btn-menu btn-green" style="padding: 12px; font-size: 1rem; margin: 5px 0;" onclick="handleManualCodeSubmit()">CREATE / SEARCH CODE</button>
         
-        <div style="font-size: 0.9rem; margin-top: 15px; color: #00d2ff; text-transform: uppercase;">Available Open Lobby Rooms:</div>
+        <div style="font-size: 0.9rem; margin-top: 10px; color: #00d2ff; text-transform: uppercase;">Available Open Lobby Rooms:</div>
         <div class="lobby-container" id="lobby-list">
             <div class="no-rooms">No available public lobbies found. Create one above!</div>
         </div>
@@ -232,6 +268,11 @@
         document.getElementById(id).classList.add('active');
     }
 
+    function toggleOpayFields() {
+        const isChecked = document.getElementById('is-staked').checked;
+        document.getElementById('opay-setup-group').style.display = isChecked ? 'block' : 'none';
+    }
+
     function confirmExit() {
         if (confirm("Are you sure you want to leave?")) {
             if (socket) socket.disconnect();
@@ -265,7 +306,6 @@
         if (socket) return;
         socket = io();
 
-        // Listen for public active rooms list updates
         socket.on('roomsListUpdate', (openRooms) => {
             renderLobbyList(openRooms);
         });
@@ -283,6 +323,11 @@
         socket.on('gameStart', () => {
             gameReady = true;
             render();
+        });
+
+        socket.on('paymentRedirect', (url) => {
+            alert("Redirecting to secure OPay checkout gateway to clear your entry stake...");
+            window.open(url, '_blank');
         });
 
         socket.on('opponentMove', (data) => {
@@ -311,9 +356,11 @@
         openRooms.forEach(room => {
             const row = document.createElement('div');
             row.className = 'room-item';
+            
+            let stakeTag = room.isStaked ? ` ₦${room.stakeAmount}` : " FREE";
             row.innerHTML = `
-                <div>Room: <span class="room-code-txt">${room.roomCode}</span></div>
-                <button class="btn-join-small" onclick="promptJoinModal('${room.roomCode}')">JOIN</button>
+                <div>Room: <span class="room-code-txt">${room.roomCode}</span> (${stakeTag})</div>
+                <button class="btn-join-small" onclick="promptJoinModal('${room.roomCode}', ${room.isStaked}, ${room.stakeAmount})">JOIN</button>
             `;
             lobbyListElement.appendChild(row);
         });
@@ -323,14 +370,25 @@
         const code = document.getElementById('room-input').value.trim().toUpperCase();
         if (!code) return alert("Please enter a room code layout.");
         
-        // If rooms are populated and the manual search item exists, ask to join. Else create.
+        const isStaked = document.getElementById('is-staked').checked;
+        const stakeAmount = document.getElementById('stake-amount').value;
+        const opayPhone = document.getElementById('user-opay-phone').value.trim();
+
+        if (isStaked && opayPhone.length < 10) {
+            return alert("Please enter a valid OPay account number to process payment.");
+        }
+
         currentRoomCode = code;
-        socket.emit('joinRoom', { roomCode: currentRoomCode });
+        socket.emit('joinRoom', { roomCode: currentRoomCode, isStaked, stakeAmount, opayPhone });
     }
 
-    function promptJoinModal(roomCode) {
+    function promptJoinModal(roomCode, isStaked, stakeAmount) {
         selectedTargetRoom = roomCode;
-        modalText.innerText = `Do you want to join this group room matching session: [${roomCode}]?`;
+        let msg = `Do you want to join match session [${roomCode}]?`;
+        if (isStaked) {
+            msg += ` This is a STAKED match requiring an entry fee of ₦${stakeAmount}. Please make sure you enter your OPay info before confirming.`;
+        }
+        modalText.innerText = msg;
         joinModal.style.display = 'flex';
     }
 
@@ -338,7 +396,8 @@
         joinModal.style.display = 'none';
         if (approved && selectedTargetRoom) {
             currentRoomCode = selectedTargetRoom;
-            socket.emit('joinRoom', { roomCode: currentRoomCode });
+            const opayPhone = document.getElementById('user-opay-phone').value.trim();
+            socket.emit('joinRoom', { roomCode: currentRoomCode, opayPhone });
         }
         selectedTargetRoom = "";
     }
@@ -486,7 +545,7 @@
             if (isComputerMode && !isFather) {
                 boardState[toR][toC] = 'q'; finalizeTurn();
             } else if (isOnlineMode && playerRole !== turn) {
-                // Wait for opponent confirmation
+                // Keep standing by
             } else {
                 handlePromotion(toR, toC, isFather);
             }
@@ -556,8 +615,14 @@
         }
         if (!hasMove) {
             setTimeout(() => {
-                if (isCheck(turn)) alert(`CHECKMATE! ${turn === 'father' ? 'MOTHER' : 'FATHER'} WINS!`);
-                else alert("STALEMATE! DRAW.");
+                if (isCheck(turn)) {
+                    alert(`CHECKMATE! ${turn === 'father' ? 'MOTHER' : 'FATHER'} WINS!`);
+                    if (isOnlineMode) {
+                        socket.emit('matchEnded', { roomCode: currentRoomCode, loserRole: turn });
+                    }
+                } else {
+                    alert("STALEMATE! DRAW.");
+                }
                 location.reload();
             }, 300);
             return true;
