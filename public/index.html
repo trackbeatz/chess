@@ -12,7 +12,7 @@
             --btn-blue: linear-gradient(to bottom, #00d2ff, #007ca0);
             --light-sq: #f0d9b5;
             --dark-sq: #b58863;
-            --sq-size: 12vw;
+            --sq-size: 11vw;
         }
 
         body, html {
@@ -21,70 +21,79 @@
             background: var(--bg-teal);
             color: white;
             overflow: hidden;
-            display: flex; justify-content: center; align-items: center;
         }
 
-        ..screen {
+        .screen {
             position: absolute; 
+            top: 0; left: 0;
             width: 100%; 
             height: 100%;
             display: none; 
             flex-direction: column;
             align-items: center; 
-            justify-content: flex-start; /* Changed from center to prevent top-clipping */
+            justify-content: flex-start;
             text-align: center;
             box-sizing: border-box;
-            padding: 20px;
-            overflow-y: auto;            /* Added to allow vertical scrolling when elements expand */
-}
-
+            padding: 30px 20px;
+            overflow-y: auto;
+        }
         .active { display: flex; }
 
-        .chess-logo { width: 100px; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+        .chess-logo { width: 90px; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
         
         .loading-bar { width: 70%; height: 12px; background: #111; border-radius: 10px; border: 2px solid #333; margin-top: 20px; }
         .loading-fill { width: 0%; height: 100%; background: #72ff00; border-radius: 10px; transition: width 0.1s; }
 
         .btn-menu {
-            width: 80%; max-width: 300px; padding: 15px; margin: 10px 0;
-            border-radius: 15px; border: 2px solid rgba(255,255,255,0.2);
-            font-size: 1.1rem; color: white; text-transform: uppercase;
+            width: 90%; max-width: 300px; padding: 14px; margin: 8px 0;
+            border-radius: 12px; border: 2px solid rgba(255,255,255,0.2);
+            font-size: 1rem; color: white; text-transform: uppercase;
             box-shadow: 0 4px 10px rgba(0,0,0,0.4); cursor: pointer;
+            flex-shrink: 0;
         }
         .btn-green { background: var(--btn-green); }
         .btn-blue { background: var(--btn-blue); }
 
         .input-code {
-            width: 80%; max-width: 280px; padding: 12px; margin: 10px 0;
+            width: 90%; max-width: 280px; padding: 12px; margin: 8px 0;
             border-radius: 10px; border: 2px solid #00d2ff;
-            font-size: 1.2rem; text-align: center; font-family: monospace;
+            font-size: 1.1rem; text-align: center; font-family: monospace;
             background: #222; color: #fff;
+            box-sizing: border-box;
         }
 
-        /* Lobby System Styles */
         .lobby-container {
-            width: 90%; max-width: 320px; height: 150px;
-            background: rgba(0,0,0,0.5); border: 2px solid #007ca0;
+            width: 90%; max-width: 300px; min-height: 160px; max-height: 220px;
+            background: rgba(0,0,0,0.6); border: 2px solid #007ca0;
             border-radius: 12px; margin: 10px 0; overflow-y: auto;
             padding: 10px; box-sizing: border-box;
         }
-        .no-rooms { font-family: sans-serif; font-size: 0.9rem; color: #aaa; margin-top: 45px; }
+        .no-rooms { font-family: sans-serif; font-size: 0.9rem; color: #aaa; padding-top: 60px; }
+        
         .room-item {
             display: flex; justify-content: space-between; align-items: center;
-            background: rgba(255,255,255,0.1); padding: 8px 12px;
-            border-radius: 8px; margin-bottom: 8px; font-family: sans-serif; font-size: 0.95rem;
+            background: rgba(255,255,255,0.07); padding: 10px 12px;
+            border-radius: 8px; margin-bottom: 8px; font-family: sans-serif; font-size: 0.9rem;
+            border-left: 4px solid #00d2ff;
         }
-        .room-code-txt { font-weight: bold; color: #ffd700; font-family: monospace; font-size: 1.1rem; }
+        .room-item.staked-item { border-left: 4px solid #72ff00; }
+        
+        .room-info { text-align: left; display: flex; flex-direction: column; gap: 2px; }
+        .room-code-txt { font-weight: bold; color: #ffd700; font-family: monospace; font-size: 1rem; }
+        .room-price-tag { font-size: 0.8rem; font-weight: bold; padding: 2px 5px; border-radius: 4px; display: inline-block; width: fit-content;}
+        .price-free { color: #00d2ff; background: rgba(0, 210, 255, 0.15); }
+        .price-staked { color: #72ff00; background: rgba(114, 255, 0, 0.15); }
+
         .btn-join-small {
-            background: var(--btn-green); border: none; padding: 6px 12px;
+            background: var(--btn-green); border: none; padding: 8px 14px;
             color: white; border-radius: 6px; cursor: pointer; font-family: 'Arial Black'; font-size: 0.75rem;
         }
 
-        /* Staking Layout Adjustments */
         .staking-panel {
             background: rgba(0, 0, 0, 0.4); border: 1px dashed #72ff00;
             padding: 12px; border-radius: 10px; margin: 8px 0;
-            width: 80%; max-width: 280px; text-align: left; font-family: sans-serif; font-size: 0.9rem;
+            width: 90%; max-width: 280px; text-align: left; font-family: sans-serif; font-size: 0.9rem;
+            box-sizing: border-box;
         }
         .staking-panel label { font-weight: bold; color: #fff; display: block; margin-bottom: 4px; }
         .staking-panel input {
@@ -92,7 +101,6 @@
             border: 1px solid #333; background: #222; color: #fff; margin-bottom: 8px;
         }
 
-        /* Modals */
         .modal-overlay {
             position: absolute; top:0; left:0; width:100%; height:100%;
             background: rgba(0,0,0,0.85); display: none;
@@ -100,7 +108,7 @@
         }
         .modal-box {
             background: #113333; border: 3px solid #72ff00; border-radius: 20px;
-            padding: 25px; width: 80%; max-width: 300px; text-align: center;
+            padding: 25px; width: 85%; max-width: 300px; text-align: center;
             box-shadow: 0 0 20px rgba(114,255,0,0.4);
         }
         .modal-actions { display: flex; gap: 15px; justify-content: center; margin-top: 20px; }
@@ -109,7 +117,8 @@
         .color-panel {
             background: rgba(0, 0, 0, 0.6);
             padding: 15px; border-radius: 10px;
-            margin: 10px 0; width: 80%; max-width: 300px;
+            margin: 10px 0; width: 90%; max-width: 300px;
+            box-sizing: border-box;
         }
         .color-pickers { display: flex; justify-content: space-around; margin-top: 10px; }
         .color-picker-wrapper { display: flex; flex-direction: column; align-items: center; font-size: 0.9rem; }
@@ -121,9 +130,9 @@
         .color-input::-webkit-color-swatch-wrapper { padding: 0; }
         .color-input::-webkit-color-swatch { border: none; border-radius: 50%; }
 
-        .board-wrapper { position: relative; border: 5px solid #333; }
+        .board-wrapper { position: relative; border: 4px solid #333; max-width: 96vw; }
         #board { display: grid; grid-template-columns: repeat(8, var(--sq-size)); grid-template-rows: repeat(8, var(--sq-size)); }
-        .square { width: var(--sq-size); height: var(--sq-size); display: flex; align-items: center; justify-content: center; font-size: 8.5vw; position: relative; user-select: none; }
+        .square { width: var(--sq-size); height: var(--sq-size); display: flex; align-items: center; justify-content: center; font-size: 8vw; position: relative; user-select: none; }
         
         .sq-light { background-color: var(--light-sq); }
         .sq-dark { background-color: var(--dark-sq); }
@@ -132,7 +141,7 @@
         .hint-green::after { content: ''; width: 30%; height: 30%; background: rgba(0, 255, 0, 0.5); border-radius: 50%; position: absolute; }
         .in-check { background-color: rgba(255, 0, 0, 0.7) !important; }
         
-        #status { font-size: 1.2rem; margin-bottom: 15px; color: #ffd700; text-shadow: 2px 2px 4px black; min-height: 1.5em; }
+        #status { font-size: 1.1rem; margin-bottom: 15px; color: #ffd700; text-shadow: 2px 2px 4px black; min-height: 1.5em; }
 
         .promotion-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -145,10 +154,8 @@
             border-radius: 10px; font-size: 2.5rem; color: white; cursor: pointer;
             display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.5);
         }
-        #room-select {
-    padding-top: 40px; /* Gives the header title breathing room at the top */
-}
 
+        #room-select { padding-top: 20px; }
     </style>
 </head>
 <body>
@@ -156,7 +163,7 @@
     <div id="join-modal" class="modal-overlay">
         <div class="modal-box">
             <div style="font-size: 1.1rem; color: #ffd700; margin-bottom: 10px;">MATCH ROOM DETECTED</div>
-            <p id="modal-text" style="font-family: sans-serif; font-size: 0.95rem; line-height: 1.4;">Do you want to join this group?</p>
+            <p id="modal-text" style="font-family: sans-serif; font-size: 0.95rem; line-height: 1.4;"></p>
             <div class="modal-actions">
                 <button class="modal-btn" style="background: var(--btn-green);" onclick="confirmRoomJoin(true)">YES</button>
                 <button class="modal-btn" style="background: #e02424;" onclick="confirmRoomJoin(false)">NO</button>
@@ -197,7 +204,7 @@
 
         <button class="btn-menu btn-green" style="padding: 12px; font-size: 1rem; margin: 5px 0;" onclick="handleManualCodeSubmit()">CREATE / SEARCH CODE</button>
         
-        <div style="font-size: 0.9rem; margin-top: 10px; color: #00d2ff; text-transform: uppercase;">Available Open Lobby Rooms:</div>
+        <div style="font-size: 0.85rem; margin-top: 10px; color: #00d2ff; text-transform: uppercase; font-family:sans-serif;">Available Open Lobby Rooms:</div>
         <div class="lobby-container" id="lobby-list">
             <div class="no-rooms">No available public lobbies found. Create one above!</div>
         </div>
@@ -343,6 +350,13 @@
             alert("Your opponent disconnected.");
             location.reload();
         });
+
+        // FIXED: Shifted out of render() to prevent duplication loops
+        socket.on('matchOverResult', (data) => {
+            const roleName = data.winner.toUpperCase();
+            alert(`MATCH OVER!\n\nWinner: ${roleName}\nTotal Pool Staked: ₦${data.totalPool}\nPlatform Fee (1%): ₦${data.feeCharged}\nAmount Transferred to Winner: ₦${data.finalPayout}`);
+            location.reload();
+        });
     }
 
     function renderLobbyList(openRooms) {
@@ -355,11 +369,16 @@
         lobbyListElement.innerHTML = '';
         openRooms.forEach(room => {
             const row = document.createElement('div');
-            row.className = 'room-item';
+            row.className = `room-item ${room.isStaked ? 'staked-item' : ''}`;
             
-            let stakeTag = room.isStaked ? ` ₦${room.stakeAmount}` : " FREE";
+            let priceLabel = room.isStaked ? `₦${room.stakeAmount}` : "FREE MATCH";
+            let classColor = room.isStaked ? "price-staked" : "price-free";
+
             row.innerHTML = `
-                <div>Room: <span class="room-code-txt">${room.roomCode}</span> (${stakeTag})</div>
+                <div class="room-info">
+                    <div>Code: <span class="room-code-txt">${room.roomCode}</span></div>
+                    <div class="room-price-tag ${classColor}">${priceLabel}</div>
+                </div>
                 <button class="btn-join-small" onclick="promptJoinModal('${room.roomCode}', ${room.isStaked}, ${room.stakeAmount})">JOIN</button>
             `;
             lobbyListElement.appendChild(row);
@@ -387,6 +406,8 @@
         let msg = `Do you want to join match session [${roomCode}]?`;
         if (isStaked) {
             msg += ` This is a STAKED match requiring an entry fee of ₦${stakeAmount}. Please make sure you enter your OPay info before confirming.`;
+        } else {
+            msg += ` This is a free-to-play public session.`;
         }
         modalText.innerText = msg;
         joinModal.style.display = 'flex';
@@ -397,6 +418,8 @@
         if (approved && selectedTargetRoom) {
             currentRoomCode = selectedTargetRoom;
             const opayPhone = document.getElementById('user-opay-phone').value.trim();
+            
+            // FIXED: Transmit opayPhone explicitly when joining standard lobbies
             socket.emit('joinRoom', { roomCode: currentRoomCode, opayPhone });
         }
         selectedTargetRoom = "";
@@ -545,7 +568,7 @@
             if (isComputerMode && !isFather) {
                 boardState[toR][toC] = 'q'; finalizeTurn();
             } else if (isOnlineMode && playerRole !== turn) {
-                // Keep standing by
+                // Standby
             } else {
                 handlePromotion(toR, toC, isFather);
             }
