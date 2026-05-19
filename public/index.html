@@ -23,6 +23,7 @@
             overflow: hidden;
         }
 
+        /* Fixed Layout Structure for Screen Containers */
         .screen {
             position: absolute; 
             top: 0; left: 0;
@@ -34,41 +35,53 @@
             justify-content: flex-start;
             text-align: center;
             box-sizing: border-box;
-            padding: 30px 20px;
+            padding: 20px;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         .active { display: flex; }
 
-        .chess-logo { width: 90px; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+        .chess-logo { width: 80px; margin-bottom: 10px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
         
         .loading-bar { width: 70%; height: 12px; background: #111; border-radius: 10px; border: 2px solid #333; margin-top: 20px; }
         .loading-fill { width: 0%; height: 100%; background: #72ff00; border-radius: 10px; transition: width 0.1s; }
 
         .btn-menu {
-            width: 90%; max-width: 300px; padding: 14px; margin: 8px 0;
+            width: 100%; max-width: 300px; padding: 14px; margin: 8px 0;
             border-radius: 12px; border: 2px solid rgba(255,255,255,0.2);
             font-size: 1rem; color: white; text-transform: uppercase;
             box-shadow: 0 4px 10px rgba(0,0,0,0.4); cursor: pointer;
             flex-shrink: 0;
+            box-sizing: border-box;
         }
         .btn-green { background: var(--btn-green); }
         .btn-blue { background: var(--btn-blue); }
 
         .input-code {
-            width: 90%; max-width: 280px; padding: 12px; margin: 8px 0;
+            width: 100%; max-width: 300px; padding: 12px; margin: 8px 0;
             border-radius: 10px; border: 2px solid #00d2ff;
             font-size: 1.1rem; text-align: center; font-family: monospace;
             background: #222; color: #fff;
             box-sizing: border-box;
         }
 
+        /* Responsive Mobile Form Wrapper */
+        .form-container-block {
+            width: 100%;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
         .lobby-container {
-            width: 90%; max-width: 300px; min-height: 160px; max-height: 220px;
+            width: 100%; max-width: 300px; min-height: 120px; max-height: 180px;
             background: rgba(0,0,0,0.6); border: 2px solid #007ca0;
             border-radius: 12px; margin: 10px 0; overflow-y: auto;
             padding: 10px; box-sizing: border-box;
         }
-        .no-rooms { font-family: sans-serif; font-size: 0.9rem; color: #aaa; padding-top: 60px; }
+        .no-rooms { font-family: sans-serif; font-size: 0.9rem; color: #aaa; padding-top: 40px; }
         
         .room-item {
             display: flex; justify-content: space-between; align-items: center;
@@ -92,7 +105,7 @@
         .staking-panel {
             background: rgba(0, 0, 0, 0.4); border: 1px dashed #72ff00;
             padding: 12px; border-radius: 10px; margin: 8px 0;
-            width: 90%; max-width: 280px; text-align: left; font-family: sans-serif; font-size: 0.9rem;
+            width: 100%; max-width: 300px; text-align: left; font-family: sans-serif; font-size: 0.9rem;
             box-sizing: border-box;
         }
         .staking-panel label { font-weight: bold; color: #fff; display: block; margin-bottom: 4px; }
@@ -117,7 +130,7 @@
         .color-panel {
             background: rgba(0, 0, 0, 0.6);
             padding: 15px; border-radius: 10px;
-            margin: 10px 0; width: 90%; max-width: 300px;
+            margin: 10px 0; width: 100%; max-width: 300px;
             box-sizing: border-box;
         }
         .color-pickers { display: flex; justify-content: space-around; margin-top: 10px; }
@@ -130,7 +143,7 @@
         .color-input::-webkit-color-swatch-wrapper { padding: 0; }
         .color-input::-webkit-color-swatch { border: none; border-radius: 50%; }
 
-        .board-wrapper { position: relative; border: 4px solid #333; max-width: 96vw; }
+        .board-wrapper { position: relative; border: 4px solid #333; max-width: 96vw; margin: 0 auto; }
         #board { display: grid; grid-template-columns: repeat(8, var(--sq-size)); grid-template-rows: repeat(8, var(--sq-size)); }
         .square { width: var(--sq-size); height: var(--sq-size); display: flex; align-items: center; justify-content: center; font-size: 8vw; position: relative; user-select: none; }
         
@@ -139,7 +152,9 @@
         
         .selected { background-color: rgba(255, 255, 0, 0.6) !important; }
         .hint-green::after { content: ''; width: 30%; height: 30%; background: rgba(0, 255, 0, 0.5); border-radius: 50%; position: absolute; }
-        .in-check { background-color: rgba(255, 0, 0, 0.7) !important; }
+        
+        /* Fixed: High contrast check state overlay to avoid overriding text styling filters */
+        .in-check { box-shadow: inset 0 0 15px 5px rgba(255, 0, 0, 0.9) !important; }
         
         #status { font-size: 1.1rem; margin-bottom: 15px; color: #ffd700; text-shadow: 2px 2px 4px black; min-height: 1.5em; }
 
@@ -187,29 +202,31 @@
     <div id="room-select" class="screen">
         <div style="font-size: 1.3rem; margin-bottom: 5px; color: #ffd700;">MULTIPLAYER ROOMS</div>
         
-        <input type="text" id="room-input" class="input-code" placeholder="ENTER ROOM CODE">
-        
-        <div class="staking-panel">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px;">
-                <input type="checkbox" id="is-staked" onchange="toggleOpayFields()" style="width: auto; margin: 0;"> 
-                Stake Money (OPay ₦)
-            </label>
-            <div id="opay-setup-group" style="display: none;">
-                <label>Stake Amount (₦):</label>
-                <input type="number" id="stake-amount" value="500" min="100" step="100">
-                <label>OPay Phone Number:</label>
-                <input type="tel" id="user-opay-phone" placeholder="08103334444" maxlength="11">
+        <div class="form-container-block">
+            <input type="text" id="room-input" class="input-code" placeholder="ENTER ROOM CODE">
+            
+            <div class="staking-panel">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px;">
+                    <input type="checkbox" id="is-staked" onchange="toggleOpayFields()" style="width: auto; margin: 0;"> 
+                    Stake Money (OPay ₦)
+                </label>
+                <div id="opay-setup-group" style="display: none;">
+                    <label>Stake Amount (₦):</label>
+                    <input type="number" id="stake-amount" value="500" min="100" step="100">
+                    <label>OPay Phone Number:</label>
+                    <input type="tel" id="user-opay-phone" placeholder="08103334444" maxlength="11">
+                </div>
             </div>
-        </div>
 
-        <button class="btn-menu btn-green" style="padding: 12px; font-size: 1rem; margin: 5px 0;" onclick="handleManualCodeSubmit()">CREATE / SEARCH CODE</button>
-        
-        <div style="font-size: 0.85rem; margin-top: 10px; color: #00d2ff; text-transform: uppercase; font-family:sans-serif;">Available Open Lobby Rooms:</div>
-        <div class="lobby-container" id="lobby-list">
-            <div class="no-rooms">No available public lobbies found. Create one above!</div>
-        </div>
+            <button class="btn-menu btn-green" style="padding: 12px; font-size: 1rem; margin: 5px 0;" onclick="handleManualCodeSubmit()">CREATE / SEARCH CODE</button>
+            
+            <div style="font-size: 0.85rem; margin-top: 10px; color: #00d2ff; text-transform: uppercase; font-family:sans-serif;">Available Open Lobby Rooms:</div>
+            <div class="lobby-container" id="lobby-list">
+                <div class="no-rooms">No available public lobbies found. Create one above!</div>
+            </div>
 
-        <button class="btn-menu btn-blue" style="font-size: 0.9rem; padding: 10px; max-width: 150px; margin-top: 5px;" onclick="showScreen('menu')">BACK</button>
+            <button class="btn-menu btn-blue" style="font-size: 0.9rem; padding: 10px; max-width: 150px; margin-top: 5px;" onclick="showScreen('menu')">BACK</button>
+        </div>
     </div>
 
     <div id="color-select" class="screen">
@@ -351,7 +368,6 @@
             location.reload();
         });
 
-        // FIXED: Shifted out of render() to prevent duplication loops
         socket.on('matchOverResult', (data) => {
             const roleName = data.winner.toUpperCase();
             alert(`MATCH OVER!\n\nWinner: ${roleName}\nTotal Pool Staked: ₦${data.totalPool}\nPlatform Fee (1%): ₦${data.feeCharged}\nAmount Transferred to Winner: ₦${data.finalPayout}`);
@@ -418,8 +434,6 @@
         if (approved && selectedTargetRoom) {
             currentRoomCode = selectedTargetRoom;
             const opayPhone = document.getElementById('user-opay-phone').value.trim();
-            
-            // FIXED: Transmit opayPhone explicitly when joining standard lobbies
             socket.emit('joinRoom', { roomCode: currentRoomCode, opayPhone });
         }
         selectedTargetRoom = "";
@@ -699,8 +713,10 @@
                 if ((p==='K' && fCheck) || (p==='k' && mCheck)) sq.classList.add('in-check');
                 
                 sq.textContent = pieceSymbols[p];
+                
+                // FIXED: Explicit dynamic inline text color mapping to prevent default text overrides
                 if (p !== '') {
-                    sq.style.color = p === p.toUpperCase() ? colors.father : colors.mother;
+                    sq.style.color = (p === p.toUpperCase()) ? colors.father : colors.mother;
                 }
 
                 sq.onclick = () => handleSquareClick(r, c);
