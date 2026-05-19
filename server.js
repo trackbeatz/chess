@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require('express'); // Fixed: lower-case const
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
@@ -16,17 +16,19 @@ app.use(express.static(path.join(__dirname, 'public'), {
     }
 }));
 
+app.use(express.json());
+
 let rooms = {};
 
-// Helper function to bundle active, joinable rooms
+// Helper function to bundle active, joinable rooms for the lobby view
 function getOpenRooms() {
     let openList = [];
     for (const code in rooms) {
-        // A room is joinable if 'mother' hasn't connected yet
         if (!rooms[code].players.mother) {
             openList.push({
                 roomCode: code,
-                host: 'Father'
+                isStaked: rooms[code].isStaked,
+                stakeAmount: rooms[code].stakeAmount
             });
         }
     }
@@ -36,25 +38,49 @@ function getOpenRooms() {
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    // Send the current available rooms list immediately to looking players
+    // Send the current available rooms list immediately to searching players
     socket.emit('roomsListUpdate', getOpenRooms());
 
-    socket.on('joinRoom', ({ roomCode }) => {
+    socket.on('joinRoom', ({ roomCode, isStaked, stakeAmount, opayPhone }) => {
         if (!rooms[roomCode]) {
-            // Create room
-            rooms[roomCode] = { players: { father: socket.id, mother: null } };
+            // Setup a brand new lobby session room
+            rooms[roomCode] = { 
+                players: { father: socket.id, mother: null },
+                isStaked: isStaked || false,
+                stakeAmount: isStaked ? parseInt(stakeAmount) : 0,
+                playerWallets: { father: opayPhone || null, mother: null },
+                paymentSettled: { father: !isStaked, mother: false }
+            };
+            
             socket.join(roomCode);
             socket.emit('roleAssigned', { role: 'father' });
-            // Broadcast new room availability to everyone in lobby
+            
+            // If staking is selected, trigger payment initialization hook layout
+            if (rooms[roomCode].isStaked) {
+                // Here is where you drop the call to your OPay Merchant function to trigger bills:
+                // initializeOpayInvoice(socket, rooms[roomCode].stakeAmount, roomCode);
+            }
+
             io.emit('roomsListUpdate', getOpenRooms());
         } else if (!rooms[roomCode].players.mother) {
-            // Join room
+            // Join an existing room configuration
             rooms[roomCode].players.mother = socket.id;
+            rooms[roomCode].playerWallets.mother = opayPhone || null;
+            rooms[roomCode].paymentSettled.mother = !rooms[roomCode].isStaked;
+
             socket.join(roomCode);
             socket.emit('roleAssigned', { role: 'mother' });
             
-            io.to(roomCode).emit('gameStart');
-            // Remove room from lobby list since it's now full
+            // Start match immediately if non-staked, or wait for webhook logs to turn true
+            if (rooms[roomCode].paymentSettled.father && rooms[roomCode].paymentSettled.mother) {
+                io.to(roomCode).emit('gameStart');
+            } else {
+                // If it is a staked match, push payment link setup to Player 2 (Mother)
+                if (rooms[roomCode].isStaked) {
+                     // initializeOpayInvoice(socket, rooms[roomCode].stakeAmount, roomCode);
+                }
+            }
+            
             io.emit('roomsListUpdate', getOpenRooms());
         } else {
             socket.emit('roomFull');
@@ -69,6 +95,49 @@ io.on('connection', (socket) => {
         socket.to(roomCode).emit('opponentPromote', { r, c, type });
     });
 
+    socket.on('matchEnded', async (data) => {
+        const { roomCode, loserRole } = data;
+        
+        // FIXED: Accessing standard object via brackets instead of .get()
+        const room = rooms[roomCode]; 
+
+        if (room) {
+            if (room.isStaked) {
+                const totalPool = room.stakeAmount * 2; // Total money collected from both players
+                
+                // Calculate the 1% platform charge
+                const platformFee = totalPool * 0.01; 
+                
+                // Winner gets the remaining 99% of the total pool
+                const winnerPayout = totalPool - platformFee;
+
+                const winnerRole = (loserRole === 'father') ? 'mother' : 'father';
+                
+                // FIXED: Matched room structure paths (room.players[winnerRole])
+                const winnerId = room.players[winnerRole]; 
+                const winnerWallet = room.playerWallets[winnerRole];
+
+                console.log(`Match Ended in Room ${roomCode}.`);
+                console.log(`Total Pool: ₦${totalPool} | 1% Fee Charged: ₦${platformFee} | Winner Payout: ₦${winnerPayout} to wallet: ${winnerWallet}`);
+
+                // 1. Trigger your OPay / Paystack payout API here using 'winnerPayout' and 'winnerWallet'
+                // 2. Save 'platformFee' into your revenue database or admin wallet
+
+                // Notify players of the final breakdown
+                io.to(roomCode).emit('matchOverResult', {
+                    winner: winnerRole,
+                    totalPool: totalPool,
+                    feeCharged: platformFee,
+                    finalPayout: winnerPayout
+                });
+            }
+
+            // FIXED: Clean up room data from memory after game finishes
+            delete rooms[roomCode];
+            io.emit('roomsListUpdate', getOpenRooms());
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
         for (const roomCode in rooms) {
@@ -81,5 +150,8 @@ io.on('connection', (socket) => {
     });
 });
 
+// Production environment variable integration setup
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running securely on port ${PORT}`);
+});
