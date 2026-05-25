@@ -275,7 +275,7 @@
     </div>
 
 <script>
-    let socket;
+        let socket;
     let currentRoomCode = "";
     let playerRole = null;
     let isOnlineMode = false;
@@ -314,39 +314,33 @@
     };
 
     function triggerDOMAlert(title, message, onYes, onNo) {
-    // 1. Get references to the existing notice elements
-    const noticeModal = document.getElementById('notice-modal');
-    const noticeTitle = document.getElementById('notice-title');
-    const noticeText = document.getElementById('notice-text');
-    const actionContainer = document.querySelector('#notice-modal .modal-actions');
+        const noticeModal = document.getElementById('notice-modal');
+        const noticeTitle = document.getElementById('notice-title');
+        const noticeText = document.getElementById('notice-text');
+        const actionContainer = document.querySelector('#notice-modal .modal-actions');
 
-    if (!noticeModal || !noticeTitle || !noticeText || !actionContainer) return;
+        if (!noticeModal || !noticeTitle || !noticeText || !actionContainer) return;
 
-    // 2. Set the text contents
-    noticeTitle.textContent = title.toUpperCase();
-    noticeText.textContent = message;
+        noticeTitle.textContent = title.toUpperCase();
+        noticeText.textContent = message;
 
-    // 3. Rebuild the actions area to have two dedicated styled buttons (YES and NO)
-    actionContainer.innerHTML = `
-        <button id="alert-yes-btn" class="modal-btn" style="background: var(--btn-green); flex: 1;">YES</button>
-        <button id="alert-no-btn" class="modal-btn" style="background: #e02424; flex: 1;">NO</button>
-    `;
+        actionContainer.innerHTML = `
+            <button id="alert-yes-btn" class="modal-btn" style="background: var(--btn-green); flex: 1;">YES</button>
+            <button id="alert-no-btn" class="modal-btn" style="background: #e02424; flex: 1;">NO</button>
+        `;
 
-    // 4. Assign the actions and handle closing the modal overlay
-    document.getElementById('alert-yes-btn').onclick = () => {
-        noticeModal.style.display = 'none';
-        if (onYes) onYes();
-    };
+        document.getElementById('alert-yes-btn').onclick = () => {
+            noticeModal.style.display = 'none';
+            if (onYes) onYes();
+        };
 
-    document.getElementById('alert-no-btn').onclick = () => {
-        noticeModal.style.display = 'none';
-        if (onNo) onNo();
-    };
+        document.getElementById('alert-no-btn').onclick = () => {
+            noticeModal.style.display = 'none';
+            if (onNo) onNo();
+        };
 
-    // 5. Open up the modal view
-    noticeModal.style.display = 'flex';
-}
-
+        noticeModal.style.display = 'flex';
+    }
 
     function closeNoticeModal() {
         noticeModal.style.display = 'none';
@@ -373,22 +367,19 @@
         document.getElementById('opay-setup-group').style.display = isChecked ? 'block' : 'none';
     }
 
- function confirmExit() {
-    triggerDOMAlert(
-        "LEAVE MATCH", 
-        "Are you sure you want to exit the current board session?", 
-        // On "Yes" (Confirm)
-        () => {
-            if (socket) socket.disconnect();
-            location.reload();
-        },
-        // On "No" (Cancel)
-        () => {
-            console.log("User decided to stay.");
-            // You can leave this empty or close the modal here if needed
-        }
-    );
-}
+    function confirmExit() {
+        triggerDOMAlert(
+            "LEAVE MATCH", 
+            "Are you sure you want to exit the current board session?", 
+            () => {
+                if (socket) socket.disconnect();
+                location.reload();
+            },
+            () => {
+                console.log("User decided to stay.");
+            }
+        );
+    }
 
     let progress = 0;
     const loadInt = setInterval(() => {
@@ -413,7 +404,21 @@
 
     function setupSocketConnection() {
         if (socket) return;
-        socket = io();
+        
+        const serverUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? window.location.origin 
+            : `${window.location.protocol}//${window.location.host}`;
+
+        socket = io(serverUrl, {
+            transports: ['websocket', 'polling'],
+            upgrade: true,
+            rememberUpgrade: true,
+            timeout: 20000
+        });
+
+        socket.on('connect', () => {
+            console.log("Successfully connected to the multiplayer matrix server!");
+        });
 
         socket.on('roomsListUpdate', (openRooms) => {
             renderLobbyList(openRooms);
@@ -591,8 +596,8 @@
             if (checkSafety) {
                 const side = isFather ? 'father' : 'mother'; const row = isFather ? 7 : 0;
                 if (!hasKingMoved[side] && !isCheck(side, state)) {
-                    if (!hasRookMoved[side+'R'] && state[row][5]==='' && state[row][6]==='') { if (!isSquareAttacked(row, 5, side, state)) moves.push({r: row, c: 6, isCastle: true}); }
-                    if (!hasRookMoved[side+'L'] && state[row][1]==='' && state[row][2]==='' && state[row][3]==='') { if (!isSquareAttacked(row, 3, side, state)) moves.push({r: row, c: 2, isCastle: true}); }
+                    if (!hasRookMoved[side === 'father' ? 'fatherR' : 'motherR'] && state[row][5]==='' && state[row][6]==='') { if (!isSquareAttacked(row, 5, side, state)) moves.push({r: row, c: 6, isCastle: true}); }
+                    if (!hasRookMoved[side === 'father' ? 'fatherL' : 'motherL'] && state[row][1]==='' && state[row][2]==='' && state[row][3]==='') { if (!isSquareAttacked(row, 3, side, state)) moves.push({r: row, c: 2, isCastle: true}); }
                 }
             }
         } else if (type === 'p') {
@@ -830,6 +835,7 @@
             }
         }
     }
+
 </script>
 </body>
 </html>
