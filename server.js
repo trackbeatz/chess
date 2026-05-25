@@ -4,9 +4,13 @@ const { Server } = require('socket.io');
 const path = require('path');
 
 const app = express();
-const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: "*" }
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    },
+    transports: ['websocket', 'polling'],
+    allowEIO3: true // Backward compatibility layer for mobile app integrations/older engines
 });
 
 // Force the server to tell browsers NEVER to cache files in the public directory
