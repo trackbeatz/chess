@@ -308,10 +308,11 @@
     const noticeText = document.getElementById('notice-text');
     const toastMsgElement = document.getElementById('toast-msg');
 
-    const pieceSymbols = {
-        'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚', 'P': '♟', 
-        'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟', '': ''
+        const pieceSymbols = {
+        'R': '♜\uFE0E', 'N': '♞\uFE0E', 'B': '♝\uFE0E', 'Q': '♛\uFE0E', 'K': '♚\uFE0E', 'P': '♟\uFE0E', 
+        'r': '♜\uFE0E', 'n': '♞\uFE0E', 'b': '♝\uFE0E', 'q': '♛\uFE0E', 'k': '♚\uFE0E', 'p': '♟\uFE0E', '': ''
     };
+
 
     function triggerDOMAlert(title, message, onYes, onNo) {
         const noticeModal = document.getElementById('notice-modal');
